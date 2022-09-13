@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="local:jar">
+    <output-path>$PROJECT_DIR$/../../../../../../build/src/ru/iitp/gis/local/artifacts/local_jar</output-path>
+    <root id="archive" name="local.jar">
+      <element id="module-output" name="local" />
+      <element id="file-copy" path="$PROJECT_DIR$/CompassLocal.java" />
+    </root>
+  </artifact>
+</component>
