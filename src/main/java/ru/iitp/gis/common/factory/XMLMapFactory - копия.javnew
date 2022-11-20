@@ -71,7 +71,6 @@ public class XMLMapFactory extends MapFactory
     Map map;
     String activeLayerId;
     Attribute root;
-    DataTable dtab1 = null;
 
     public Map createMap(String url) throws Exception {
         Parser parser = //ParserFactory.makeParser(ru.iitp.gis.Config.PARSER);
@@ -99,7 +98,7 @@ public class XMLMapFactory extends MapFactory
     private void showMessage(String msg) {
         System.err.println(msg);
     }
-    private String pref;
+
     //org.xml.sax.DocumentHandler implementation
 
     public void startElement(String name, AttributeList attrs) {
@@ -189,12 +188,10 @@ public class XMLMapFactory extends MapFactory
                 }
                 if (layer != null) layer.setDatasource(dsrc);
                 //this.dsrc = (DataSource)dsrc.clone();
-                pref = dsrc.getSrc().substring(0,dsrc.getSrc().lastIndexOf('.'))+"_";//my chan
                 stack.push(dsrc);
                 DataTable dtab = new DataTable();
-                if(dtab1!=null)//my ch
-                    dtab = dtab1;// my ch
                 //this.dtab = new DataTable();
+               // if(root == null)// 19.11.2022 - del my comm
                 root = dtab.getRoot();
                 //this.dtab.setRoot(root);
                 //this.dtab.setDataSource(this.dsrc);
@@ -240,7 +237,7 @@ public class XMLMapFactory extends MapFactory
 
                 Attribute attr = dtab.getAttribute(id);
                 if(attr==null) {
-                    attr = new Attribute(pref+id, attrs.getValue("name"), getType(attrs.getValue("type")));//my chan pref+
+                    attr = new Attribute(id, attrs.getValue("name"), getType(attrs.getValue("type")));
                     dtab.addAttribute(attr);
                 }
 
@@ -326,7 +323,6 @@ public class XMLMapFactory extends MapFactory
             case DATABASE:
                 DataTable dtab = (DataTable) stack.pop();
                 DataSource dsrc = (DataSource) stack.pop();
-                dtab1 = dtab;//my ch
                 showMessage("  Load database: " + dsrc.getSrc());
                 try {
                     long t = System.currentTimeMillis();
@@ -352,6 +348,9 @@ public class XMLMapFactory extends MapFactory
                     ((MapLayer) stack.peek()).setDataSupplier(null);
                     break;
                 }
+//                if (root.getParent() != null)//my comm
+  //                  root = root.getParent();//my comm
+
                 break;
             case ATTR_GROUP:
             case ATTR_LIST:
