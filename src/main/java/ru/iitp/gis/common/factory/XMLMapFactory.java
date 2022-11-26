@@ -37,7 +37,7 @@ public class XMLMapFactory extends MapFactory
     private static final int MAPPING = 9;
     private static final int OBJECTS = 10;
     private static final int OBJECT = 11;
-
+    private static final int REGNAMES = 12;
     private static Hashtable tags = new Hashtable();
     public static Hashtable types = new Hashtable();
 
@@ -46,6 +46,7 @@ public class XMLMapFactory extends MapFactory
         tags.put("map", new Integer(MAP));
         tags.put("layer", new Integer(LAYER));
         tags.put("geometry", new Integer(GEOMETRY));
+        tags.put("regnames", new Integer(REGNAMES));
         tags.put("database", new Integer(DATABASE));
         tags.put("attr-list", new Integer(ATTR_LIST));
         tags.put("attr", new Integer(ATTR));
@@ -162,6 +163,46 @@ public class XMLMapFactory extends MapFactory
                     break;
                 }
                 break;
+                case REGNAMES :
+                    //String src = attrs.getValue("src");
+                    //String format = attrs.getValue("format");
+                   layer = (MapLayer) stack.peek();
+                    String srcRN = attrs.getValue("src");
+                    String file_name_rn;
+                    if (srcRN.lastIndexOf('\\') >= 0)
+                        file_name_rn = srcRN.substring(srcRN.lastIndexOf('\\') + 1, srcRN.length());
+                    else if (srcRN.lastIndexOf('/') >= 0)
+                        file_name_rn = srcRN.substring(srcRN.lastIndexOf('/') + 1, srcRN.length());
+                    else file_name_rn = srcRN;
+               //     if (srcRN != null && srcRN.length() > 0 && layer != null) layer.setRegionNames_file_name(file_name_rn);
+
+                    String formatrn = attrs.getValue("format");
+                    String idrn = attrs.getValue("id-attr");
+                    if (formatrn == null)
+                        formatrn = "xlsx";
+                    if (idrn == null)
+                        formatrn = "REGION";
+
+                    RegionNamesSource rsrc = new RegionNamesSource();
+                    rsrc.setSrc(srcRN);
+                    rsrc.setFormat(attrs.getValue("format"));
+                    rsrc.setIdAttr(attrs.getValue("id-attr"));
+                    if (rsrc.getSrc() != null && layer != null) {
+                        String str = new String(rsrc.getSrc());
+                        int ind = str.lastIndexOf('/');
+                        if (ind == -1) ind = str.lastIndexOf('\\');
+                        if (ind == -1) str = "";
+                        else str = str.substring(0, ind + 1);
+                        Config.COMMENT_DIRECTORIES.put(layer.getId(), str + "Comment");
+                    }
+//                    if (layer != null) layer.setRNsource(rsrc);
+                    //this.dsrc = (DataSource)dsrc.clone();
+ //my                   stack.push(dsrc);
+//                    DataTable rnm = new DataTable();
+                    //this.dtab = new DataTable();
+//                    dtab.setRegionNamesSource(rsrc);
+
+                    break;
             case DATABASE:
                 layer = (MapLayer) stack.peek();
                 String srcDB = attrs.getValue("src");
@@ -323,6 +364,10 @@ public class XMLMapFactory extends MapFactory
             case LAYER:
                 stack.pop();
                 break;
+
+            case REGNAMES :
+            break;
+
             case DATABASE:
                 DataTable dtab = (DataTable) stack.pop();
                 DataSource dsrc = (DataSource) stack.pop();
