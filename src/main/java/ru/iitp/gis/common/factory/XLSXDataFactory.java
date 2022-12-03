@@ -42,8 +42,13 @@ public class XLSXDataFactory extends DataFactory implements DataType {
         }
     }
 
-    public void createRegNamesTable(DataSource rnsrc, Hashtable rntable) throws FactoryException {
+    public void createRegNamesTable(DataTable dtab) throws FactoryException {
+        if(dtab.getRegNameSource()== null)
+            return;
+        if(dtab.getRecordCount()>0)
+            return;
         try {
+            DataSource rnsrc = dtab.getRegNameSource();
             PCInputStream in;
             try {
                 String p = Config.PATH + rnsrc.getSrc();
@@ -53,38 +58,38 @@ public class XLSXDataFactory extends DataFactory implements DataType {
                 System.out.println(fnfe.getMessage());
                 fnfe.printStackTrace();
                 in = new PCInputStream(new BufferedInputStream(
-                        new URL(rnsrc.getSrc()).openConnection().getInputStream()));
+                        new URL(dtab.getRegNameSource().getSrc()).openConnection().getInputStream()));
             }
-            String pref = rnsrc.getSrc().substring(0, rnsrc.getSrc().lastIndexOf('.')) + "_";//my chan;
             XSSFWorkbook workbook = (XSSFWorkbook) WorkbookFactory.create(in);
-            String[] attributes = null;
-
             XSSFSheet sheet = (XSSFSheet) workbook.getSheetAt(0);
-            int column_num = sheet.getRow(2).getLastCellNum();
-            int row_num = sheet.getLastRowNum();
-            attributes = new String[column_num];
-            ArrayList<String> subattr = new ArrayList<String>();
-            Hashtable htsubatr = new Hashtable();
-            int ireg = 0;
             XSSFRow row = (XSSFRow) sheet.getRow(0);
+            int column_num = row.getLastCellNum();
+            int row_num = sheet.getLastRowNum();
+
+            String[] col_nm = new String[column_num];
+            int ireg = 0;
             for (int i = 0; i < column_num; i++) {
                 if (row.getCell(i) == null) {
-                    if (i == 0)
-                        attributes[i] = rnsrc.getIdAttr();
+                    if (i == 0) {
+                        ireg = i;
+                        break;
+                    }
                     continue;
                 } else
                     try {
-                        attributes[i] = row.getCell(i).getRichStringCellValue().getString();
-                        attributes[i] = row.getCell(i).getStringCellValue();//getRichStringCellValue().getString();
-
+                        col_nm[i] = row.getCell(i).getStringCellValue();//getRichStringCellValue().getString();
+                        if (col_nm[i].equals(rnsrc.getIdAttr())) {
+                            ireg = i;
+                            break;
+                        }
+                        continue;
                     } catch (Exception e) {
-                        if (row.getCell(i).getNumericCellValue() == (int) row.getCell(i).getNumericCellValue())
-                            attributes[i] = String.valueOf((int) row.getCell(i).getNumericCellValue());
-                        else
-                            attributes[i] = String.valueOf(row.getCell(i).getNumericCellValue());
+                        e.printStackTrace();
                     }
-                if (attributes[i].equals(rnsrc.getIdAttr())) ireg = i;
             }
+            int inum = -1;
+            if (ireg < column_num) inum = ireg + 1;
+            Hashtable <Integer,String> rntable = new Hashtable();
             for (int i = 1; i <= row_num; i++) {
                 row = (XSSFRow) sheet.getRow(i);
                 if (row == null)
@@ -93,19 +98,37 @@ public class XLSXDataFactory extends DataFactory implements DataType {
                 XSSFCell cell = (XSSFCell) row.getCell(ireg);
                 if (cell == null || cell.getRawValue() == null)
                     continue;
+                try {
+                    String sreg = row.getCell(ireg).getStringCellValue();
+                    String snreg = "-1";
+                    int nreg = -1;
+                    if (inum > 0) {
+                        nreg = (int) row.getCell(inum).getNumericCellValue();
+                        snreg = String.valueOf(nreg);
+                        rntable.put(nreg,sreg);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            for(int i = 1; i<=rntable.size(); i++) {
+                DataRecord drec = new DataRecord(dtab);
+                String rte = String.valueOf(i);
+                String id =(String) rntable.get(i);
+                drec.setId(id);
+                dtab.addRecord(drec);
             }
         }
         catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     public void createTable(DataSource dsrc, DataTable dtab) throws FactoryException {
-        try {
-            if(dtab.getRegNameSource() != null) {
-                Hashtable rntable = new Hashtable();
-                createRegNamesTable(dtab.getRegNameSource(), rntable);
-            }
+        try{
 
+            createRegNamesTable(dtab);
             PCInputStream in;
             try {
                 String p = Config.PATH + dsrc.getSrc();
@@ -141,8 +164,8 @@ public class XLSXDataFactory extends DataFactory implements DataType {
                         continue;}
                      else
                     try {
-                        attributes[i] = row.getCell(i).getRichStringCellValue().getString();
-                        attributes[i] = row.getCell(i).getStringCellValue();//getRichStringCellValue().getString();
+                        attributes[i] = row.getCell(i).getRichStringCellValue().getString().trim();
+                        attributes[i] = row.getCell(i).getStringCellValue().trim();//getRichStringCellValue().getString();
 
                     } catch (Exception e) {
                         if(row.getCell(i).getNumericCellValue() ==(int)row.getCell(i).getNumericCellValue())
@@ -165,7 +188,7 @@ public class XLSXDataFactory extends DataFactory implements DataType {
                         Attribute attr111 = dtab.getAttribute(attributes[i]);
                         if (attr111 == null) {
                             attr111 = new Attribute(pref+sheet.getSheetName() + "_" + attributes[i], attributes[i], attrShN.getType());
-                            attrShN.addAttribute(attr111);
+                           // attrShN.addAttribute(attr111);
                             attr111.setParent(attrShN);
                             dtab.addAttribute(attr111, new Vector(1), attrShN);
                         }
@@ -219,11 +242,12 @@ public class XLSXDataFactory extends DataFactory implements DataType {
                             String value = cell == null ? "" : cell.getRichStringCellValue().getString();
                             // my beg
                             drec =dtab.getRecord(value);
-                            if(drec == null)
+                            if(drec == null) {
                                 drec = new DataRecord(dtab);
-                            recId = value;
-                            // my end
-                            drec.setId(value != null ? value : "" + i);
+                                recId = value;
+                                // my end
+                                drec.setId(value != null ? value : "" + i);
+                            }
                             continue;
                         }
                         if (attributes[j].equals(dsrc.getNameAttr())) {
@@ -274,8 +298,8 @@ public class XLSXDataFactory extends DataFactory implements DataType {
                         }
                         drec.setData(val, pref+sheet.getSheetName() + "_" +attributes[j]);//my chan pref+
                     }
-                    if(dtab.getRecord(recId) == null && dtab.getRecordCount()<=84)
-                    dtab.addRecord(drec);
+//                    if(dtab.getRecord(recId) == null && dtab.getRecordCount()<=84)
+  //                  dtab.addRecord(drec);
                 }
             }
             in.close();
