@@ -13,6 +13,7 @@ import ru.iitp.gis.common.util.datacomp.Datacomp;
 import ru.iitp.gis.common.model.*;
 import ru.iitp.gis.common.view.ColorRenderer;
 import ru.iitp.gis.common.view.Style;
+import ru.iitp.gis.common.factory.RegionNamesSource;
 
 import java.awt.Color;
 import java.io.InputStreamReader;
@@ -73,7 +74,7 @@ public class XMLMapFactory extends MapFactory
     String activeLayerId;
     Attribute root;
     DataTable dtab1 = null;
-
+    DataSource rsrc = null;
     public Map createMap(String url) throws Exception {
         Parser parser = //ParserFactory.makeParser(ru.iitp.gis.Config.PARSER);
                 new com.microstar.xml.SAXDriver();
@@ -181,9 +182,9 @@ public class XMLMapFactory extends MapFactory
                     if (formatrn == null)
                         formatrn = "xlsx";
                     if (idrn == null)
-                        formatrn = "REGION";
+                        idrn = "REGION";
 
-                    RegionNamesSource rsrc = new RegionNamesSource();
+                    rsrc = new DataSource();
                     rsrc.setSrc(srcRN);
                     rsrc.setFormat(attrs.getValue("format"));
                     rsrc.setIdAttr(attrs.getValue("id-attr"));
@@ -196,12 +197,10 @@ public class XMLMapFactory extends MapFactory
                         Config.COMMENT_DIRECTORIES.put(layer.getId(), str + "Comment");
                     }
 //                    if (layer != null) layer.setRNsource(rsrc);
-                    //this.dsrc = (DataSource)dsrc.clone();
- //my                   stack.push(dsrc);
-//                    DataTable rnm = new DataTable();
-                    //this.dtab = new DataTable();
-//                    dtab.setRegionNamesSource(rsrc);
-
+//                    dtab1 = new DataTable();
+//                    XLSXDataFactory.createRegNamesTable(rsrc, dtab1);
+//                    XLSXDataFactory.getFactory(rsrc.getFormat()).createRegNamesTable(rsrc, dtab1);
+//                    dtab1.setRegNameSource(rsrc);
                     break;
             case DATABASE:
                 layer = (MapLayer) stack.peek();
@@ -240,6 +239,7 @@ public class XMLMapFactory extends MapFactory
                 //this.dtab.setRoot(root);
                 //this.dtab.setDataSource(this.dsrc);
                 dtab.setDataSource(dsrc);
+                dtab.setRegNameSource(rsrc);
                 stack.push(dtab);
                 break;
             case OBJECT:
@@ -322,6 +322,7 @@ public class XMLMapFactory extends MapFactory
                         style.chartStyle = Style.PIE_CHART;
                     else if (cs.equals("bar-chart")) style.chartStyle = Style.BAR_CHART;
                 }
+                style.drawRegName = new Boolean(attrs.getValue("draw-regname")).booleanValue();
                 style.drawLabels = new Boolean(attrs.getValue("draw-labels")).booleanValue();
                 style.drawShadow = new Boolean(attrs.getValue("draw-shadow")).booleanValue();
                 String palette = attrs.getValue("palette");
@@ -372,6 +373,7 @@ public class XMLMapFactory extends MapFactory
                 DataTable dtab = (DataTable) stack.pop();
                 DataSource dsrc = (DataSource) stack.pop();
                 dtab1 = dtab;//my ch
+//                dtab1.setRegNameSource( rsrc);
                 showMessage("  Load database: " + dsrc.getSrc());
                 try {
                     long t = System.currentTimeMillis();
